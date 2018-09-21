@@ -317,8 +317,12 @@ INF RuleOverride = BINARY $(PLATFORM_BINARY_PACKAGE)/$(DXE_ARCHITECTURE)$(TARGET
 INF  UefiCpuPkg/CpuIoPei/CpuIoPei.inf
 
 !if $(CAPSULE_ENABLE) == TRUE
+!if $(DXE_ARCHITECTURE) == X64
 INF  MdeModulePkg/Universal/CapsulePei/CapsulePei.inf
 INF  MdeModulePkg/Universal/CapsulePei/CapsuleX64.inf
+!else
+INF  MdeModulePkg/Universal/CapsulePei/CapsulePei.inf
+!endif
 !endif
 
 !if $(MINNOW2_FSP_BUILD) == FALSE

@@ -36,6 +36,8 @@
 
 [Sources.IA32]
   IA32/CpuIA32.c
+  IA32/CpuIA32.asm
+  IA32/CpuIA32.S
 
 [Sources.X64]
   X64/Cpu.asm

@@ -28,7 +28,7 @@ export WORKSPACE=$(pwd)
 #build_threads=($NUMBER_OF_PROCESSORS)+1
 Build_Flags=
 exitCode=0
-Arch=X64
+Arch=IA32
 SpiLock=0
 
 export CORE_PATH=$WORKSPACE/edk2

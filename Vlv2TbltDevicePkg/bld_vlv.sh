@@ -133,6 +133,8 @@ fi
 ## Remove the values for Platform_Type and Build_Target from BiosIdX.env and stage in Conf
 if [ $Arch == "IA32" ]; then
   cp $PLATFORM_PACKAGE/BiosId.env    Conf/BiosId.env
+  sed -i '/^BOARD_EXT/d' Conf/BiosId.env
+  echo BOARD_EXT = I32                >> Conf/BiosId.env
   echo DEFINE X64_CONFIG = FALSE      >> $auto_config_inc
 else
   cp $PLATFORM_PACKAGE/BiosId.env  Conf/BiosId.env

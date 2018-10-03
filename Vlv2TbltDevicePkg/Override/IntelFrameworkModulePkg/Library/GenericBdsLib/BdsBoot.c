@@ -3568,6 +3568,7 @@ BdsLibBuildOptionFromHandle (
   IN  CHAR16                     *String
   )
 {
+#if 0
   EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
 
   DevicePath = DevicePathFromHandle (Handle);
@@ -3576,6 +3577,7 @@ BdsLibBuildOptionFromHandle (
   // Create and register new boot option
   //
   BdsLibRegisterNewOption (BdsBootOptionList, DevicePath, String, L"BootOrder");
+#endif
 }
 
 

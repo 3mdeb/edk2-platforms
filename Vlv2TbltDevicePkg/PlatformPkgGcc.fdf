@@ -50,11 +50,17 @@ DEFINE FLASH_REGION_AZALIABIN_BASE                            = 0xFFD08000
 DEFINE FLASH_REGION_FVMAIN_OFFSET                             = 0x00110000
 DEFINE FLASH_REGION_FVMAIN_SIZE                               = 0x00215000
 
-DEFINE FLASH_REGION_FV_RECOVERY2_OFFSET                       = 0x00325000
-DEFINE FLASH_REGION_FV_RECOVERY2_SIZE                         = 0x0006B000
+DEFINE FLASH_REGION_BINARY_FIRMWARE_OFFSET                    = 0x00325000
+DEFINE FLASH_REGION_BINARY_FIRMWARE_SIZE                      = 0x00055000
  
-DEFINE FLASH_REGION_FV_RECOVERY_OFFSET                        = 0x00390000
-DEFINE FLASH_REGION_FV_RECOVERY_SIZE                          = 0x00070000
+DEFINE FLASH_REGION_BINARY_FIRMWARE2_OFFSET                   = 0x0037A000
+DEFINE FLASH_REGION_BINARY_FIRMWARE2_SIZE                     = 0x0002E000
+
+DEFINE FLASH_REGION_FV_RECOVERY2_OFFSET                       = 0x003A8000
+DEFINE FLASH_REGION_FV_RECOVERY2_SIZE                         = 0x00020000
+
+DEFINE FLASH_REGION_FV_RECOVERY_OFFSET                        = 0x003C8000
+DEFINE FLASH_REGION_FV_RECOVERY_SIZE                          = 0x00038000
 
 ################################################################################
 #
@@ -151,6 +157,20 @@ FILE = Vlv2TbltDevicePkg/Stitch/Gcc/NvStorageFtwSpare.bin
 $(FLASH_REGION_FVMAIN_OFFSET)|$(FLASH_REGION_FVMAIN_SIZE)
 gPlatformModuleTokenSpaceGuid.PcdFlashFvMainBase|gPlatformModuleTokenSpaceGuid.PcdFlashFvMainSize
 FV = FVMAIN_COMPACT
+
+  #
+  # Binary Firmware
+  #
+$(FLASH_REGION_BINARY_FIRMWARE_OFFSET)|$(FLASH_REGION_BINARY_FIRMWARE_SIZE)
+gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase|gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize
+FILE = dummy.efi
+
+  #
+  # Binary Firmware#2
+  #
+$(FLASH_REGION_BINARY_FIRMWARE2_OFFSET)|$(FLASH_REGION_BINARY_FIRMWARE2_SIZE)
+gPlatformModuleTokenSpaceGuid.PcdFlashBinFw2Base|gPlatformModuleTokenSpaceGuid.PcdFlashBinFw2Size
+FV = FVCUSTOM
 
   #
   # FV Recovery#2
@@ -645,6 +665,7 @@ INF PcAtChipsetPkg/8259InterruptControllerDxe/8259.inf
 FILE DRIVER = 961578FE-B6B7-44c3-AF35-6BC705CD2B1F {
     SECTION PE32 = FatBinPkg/EnhancedFatDxe/$(EDK_DXE_ARCHITECTURE)/Fat.efi
   }
+
 #
 # UEFI Shell
 #
@@ -731,6 +752,30 @@ FILE FREEFORM = PCD(gEfiSignedCapsulePkgTokenSpaceGuid.PcdEdkiiRsa2048Sha256Test
      SECTION UI = "Rsa2048Sha256TestSigningPublicKey"
      }
 !endif
+
+[FV.FVCUSTOM]
+BlockSize          = $(FLASH_BLOCK_SIZE)
+FvAlignment        = 16
+ERASE_POLARITY     = 1
+MEMORY_MAPPED      = TRUE
+STICKY_WRITE       = TRUE
+LOCK_CAP           = TRUE
+LOCK_STATUS        = TRUE
+WRITE_DISABLED_CAP = TRUE
+WRITE_ENABLED_CAP  = TRUE
+WRITE_STATUS       = TRUE
+WRITE_LOCK_CAP     = TRUE
+WRITE_LOCK_STATUS  = TRUE
+READ_DISABLED_CAP  = TRUE
+READ_ENABLED_CAP   = TRUE
+READ_STATUS        = TRUE
+READ_LOCK_CAP      = TRUE
+READ_LOCK_STATUS   = TRUE
+FvNameGuid         = 25866e9c-6536-49ce-9b19-2dd29c582862
+
+FILE APPLICATION = 78563412-3412-7856-9012-123456789012 {
+    SECTION PE32 = hello_world.efi
+  }
 
 [FV.FVMAIN_COMPACT]
 BlockSize          = $(FLASH_BLOCK_SIZE)

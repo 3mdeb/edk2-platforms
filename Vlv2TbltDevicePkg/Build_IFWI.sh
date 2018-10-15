@@ -24,7 +24,7 @@ function Usage ( ) {
 exitCode=0
 Build_Flags=
 Stitch_Flags=
-Arch=X64
+Arch=IA32
 PLATFORM_PACKAGE=Vlv2TbltDevicePkg
 
 ## Parse Optional arguments

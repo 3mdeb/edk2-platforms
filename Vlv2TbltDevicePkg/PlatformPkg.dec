@@ -160,6 +160,9 @@
   gPlatformModuleTokenSpaceGuid.PcdBiosRomSize|0x00400000|UINT32|0x4000000C
   gPlatformModuleTokenSpaceGuid.PcdFlashMinEraseSize|0x1000|UINT32|0x70000007
 
+  gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase|0x00325000|UINT32|0x42000001
+  gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize|0x00055000|UINT32|0x42000002
+
 [PcdsPatchableInModule]
   ## Provides the memory mapped base address of the BIOS Image Area.  This area
   #  must be within the memory mapped region defined by the BIOS Flash Device

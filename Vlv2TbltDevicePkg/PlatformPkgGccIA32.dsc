@@ -2,6 +2,7 @@
 # Platform description.
 #
 # Copyright (c) 2012  - 2018, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018, CMR Surgical Limited.<BR>
 #                                                                                  
 # This program and the accompanying materials are licensed and made available under
 # the terms and conditions of the BSD License that accompanies this distribution.  

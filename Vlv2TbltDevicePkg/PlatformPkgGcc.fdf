@@ -2,6 +2,7 @@
 # FDF file of Platform.
 #
 # Copyright (c) 2008  - 2018, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018, CMR Surgical Limited.<BR>
 #                                                                                  
 # This program and the accompanying materials are licensed and made available under
 # the terms and conditions of the BSD License that accompanies this distribution.  
@@ -160,7 +161,7 @@ FV = FVMAIN_COMPACT
   #
 $(FLASH_REGION_BINARY_FIRMWARE_OFFSET)|$(FLASH_REGION_BINARY_FIRMWARE_SIZE)
 gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase|gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize
-FILE = hello_world.efi
+FILE = target_binary.efi
 
   #
   # FV Recovery#2

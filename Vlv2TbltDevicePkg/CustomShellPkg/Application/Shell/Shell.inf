@@ -51,6 +51,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   Vlv2TbltDevicePkg/CustomShellPkg/ShellPkg.dec
+  Vlv2TbltDevicePkg/PlatformPkg.dec
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
@@ -95,6 +96,10 @@
   gEfiUnicodeCollation2ProtocolGuid                       ## CONSUMES
   gEfiDevicePathProtocolGuid                              ## CONSUMES
   gEfiHiiPackageListProtocolGuid                          ## SOMETIMES_PRODUCES
+
+[FixedPcd]
+  gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase            ## CONSUMES
+  gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize            ## CONSUMES
 
 [Pcd]
   gEfiShellPkgTokenSpaceGuid.PcdShellSupportLevel           ## CONSUMES

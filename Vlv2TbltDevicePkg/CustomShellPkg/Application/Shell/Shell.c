@@ -562,8 +562,8 @@ UefiMain (
   MemPath[0].Header.Length[0] = (UINT8)sizeof(MEMMAP_DEVICE_PATH);
   MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH)>> 8);
   MemPath[0].MemoryType = EfiLoaderCode;
-  MemPath[0].StartingAddress = (UINT32)0xfff25000;   // TODO: use Pcd for address and size
-  MemPath[0].EndingAddress = (UINT32)(0xfff25000 + 0x00083000);
+  MemPath[0].StartingAddress = PcdGet32(PcdFlashBinFwBase);
+  MemPath[0].EndingAddress = MemPath[0].StartingAddress + PcdGet32(PcdFlashBinFwSize);
 
   MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
   MemPath[1].Header.SubType = END_INSTANCE_DEVICE_PATH_SUBTYPE;

@@ -111,7 +111,7 @@
       DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
   }
 
-  ShellPkg/Application/Shell/Shell.inf {
+  Vlv2TbltDevicePkg/CustomShellPkg/Application/Shell/Shell.inf {
     <LibraryClasses>
       NULL|ShellPkg/Library/UefiShellLevel2CommandsLib/UefiShellLevel2CommandsLib.inf
       NULL|ShellPkg/Library/UefiShellLevel1CommandsLib/UefiShellLevel1CommandsLib.inf

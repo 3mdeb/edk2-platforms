@@ -50,7 +50,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  ShellPkg/ShellPkg.dec
+  Vlv2TbltDevicePkg/CustomShellPkg/ShellPkg.dec
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]

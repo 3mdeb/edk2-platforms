@@ -50,11 +50,14 @@ DEFINE FLASH_REGION_AZALIABIN_BASE                            = 0xFFD08000
 DEFINE FLASH_REGION_FVMAIN_OFFSET                             = 0x00110000
 DEFINE FLASH_REGION_FVMAIN_SIZE                               = 0x00215000
 
-DEFINE FLASH_REGION_FV_RECOVERY2_OFFSET                       = 0x00325000
-DEFINE FLASH_REGION_FV_RECOVERY2_SIZE                         = 0x0006B000
- 
-DEFINE FLASH_REGION_FV_RECOVERY_OFFSET                        = 0x00390000
-DEFINE FLASH_REGION_FV_RECOVERY_SIZE                          = 0x00070000
+DEFINE FLASH_REGION_RESERVED_OFFSET                           = 0x00325000
+DEFINE FLASH_REGION_RESERVED_SIZE                             = 0x00083000
+
+DEFINE FLASH_REGION_FV_RECOVERY2_OFFSET                       = 0x003A8000
+DEFINE FLASH_REGION_FV_RECOVERY2_SIZE                         = 0x00020000
+
+DEFINE FLASH_REGION_FV_RECOVERY_OFFSET                        = 0x003C8000
+DEFINE FLASH_REGION_FV_RECOVERY_SIZE                          = 0x00038000
 
 ################################################################################
 #
@@ -151,6 +154,17 @@ FILE = Vlv2TbltDevicePkg/Stitch/Gcc/NvStorageFtwSpare.bin
 $(FLASH_REGION_FVMAIN_OFFSET)|$(FLASH_REGION_FVMAIN_SIZE)
 gPlatformModuleTokenSpaceGuid.PcdFlashFvMainBase|gPlatformModuleTokenSpaceGuid.PcdFlashFvMainSize
 FV = FVMAIN_COMPACT
+
+  #
+  # Reserved
+  #
+$(FLASH_REGION_RESERVED_OFFSET)|$(FLASH_REGION_RESERVED_SIZE)
+gPlatformModuleTokenSpaceGuid.PcdFlashRsvdBase|gPlatformModuleTokenSpaceGuid.PcdFlashRsvdSize
+DATA = {
+  0x52, 0x45, 0x53, 0x45, 0x52, 0x56, 0x45, 0x44,
+  0x00
+}  # "RESERVED" in HEX
+#DATA = { 0xFF }  # empty section
 
   #
   # FV Recovery#2

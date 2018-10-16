@@ -56,3 +56,8 @@
 
 #string STR_SHELL_IMAGE_NOT_APP       #language en-US "The image is not an application.\r\n"
 
+#string STR_GET_HELP_RTNIC       #language en-US ""
+".TH rtnic 0 "start a memory-mapped application"\r\n"
+".SH NAME\r\n"
+"Starts a memory-mapped application. \r\n"
+

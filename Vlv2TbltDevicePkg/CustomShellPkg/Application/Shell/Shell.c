@@ -315,6 +315,147 @@ InternalEfiShellStartCtrlSMonitor(
   return (Status);
 }
 
+/**
+  Internal worker function to load and run an image via memory-mapped device path.
+  It is a modified InternalShellExecuteDevicePath() from ShellProtocol.c, tailored
+  to be run as an internal command.
+
+  @param ImageHandle            NULL in the case of internal commands.
+  @param *SystemTable           System Table for this image.
+
+  @retval EFI_INVALID_PARAMETER The parameters are invalid.
+  @retval EFI_LOAD_ERROR        Image format is corrupt or not understood.
+  @retval EFI_UNSUPPORTED       Nested shell invocations are not allowed.
+  @retval other                 Return value of underlying application.
+**/
+EFI_STATUS
+Trampoline(
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_STATUS                    CleanupStatus;
+  EFI_HANDLE                    NewHandle;
+  EFI_LOADED_IMAGE_PROTOCOL     *LoadedImage;
+  MEMMAP_DEVICE_PATH            MemPath[2];
+
+  MemPath[0].Header.Type = HARDWARE_DEVICE_PATH;
+  MemPath[0].Header.SubType = HW_MEMMAP_DP;
+  MemPath[0].Header.Length[0] = (UINT8)sizeof(MEMMAP_DEVICE_PATH);
+  MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH) >> 8);
+  MemPath[0].MemoryType = EfiLoaderCode;
+
+  //
+  // When building standalone package PcdFlashBinFwBase is offset relative
+  // to PcdBiosRomBase. In the case of building whole image PcdFlashBinFwBase
+  // is fixed during parsing of PlatformPkgGcc.fdf and is already an address
+  // in the memory space.
+  //
+  MemPath[0].StartingAddress = PcdGet32(PcdFlashBinFwBase);
+  if (MemPath[0].StartingAddress < PcdGet32(PcdBiosRomBase)) {
+    MemPath[0].StartingAddress += PcdGet32(PcdBiosRomBase);
+  }
+  MemPath[0].EndingAddress = MemPath[0].StartingAddress + PcdGet32(PcdFlashBinFwSize);
+
+  MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
+  MemPath[1].Header.SubType = END_INSTANCE_DEVICE_PATH_SUBTYPE;
+  MemPath[1].Header.Length[0] = (UINT8)sizeof(EFI_DEVICE_PATH);
+  MemPath[1].Header.Length[1] = (UINT8)(sizeof(EFI_DEVICE_PATH) >> 8);
+
+  ImageHandle = gImageHandle;
+  NewHandle = NULL;
+
+  //
+  // Load the image with:
+  // FALSE - not from boot manager,
+  // address and size of memory region where the image is located.
+  //
+  Status = gBS->LoadImage(
+    FALSE,
+    ImageHandle,
+    (EFI_DEVICE_PATH_PROTOCOL*)MemPath,
+    (VOID*) ((UINTN)(MemPath[0].StartingAddress)),
+    MemPath[0].EndingAddress - MemPath[0].StartingAddress,
+    &NewHandle);
+
+  if (EFI_ERROR(Status)) {
+    if (NewHandle != NULL) {
+      gBS->UnloadImage(NewHandle);
+    }
+    return Status;
+  }
+  Status = gBS->OpenProtocol(
+    NewHandle,
+    &gEfiLoadedImageProtocolGuid,
+    (VOID**)&LoadedImage,
+    ImageHandle,
+    NULL,
+    EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+  if (!EFI_ERROR(Status)) {
+    //
+    // If the image is not an app abort it.
+    //
+    if (LoadedImage->ImageCodeType != EfiLoaderCode){
+      ShellPrintHiiEx(
+        -1,
+        -1,
+        NULL,
+        STRING_TOKEN (STR_SHELL_IMAGE_NOT_APP),
+        ShellInfoObject.HiiHandle);
+
+      gBS->UnloadImage(NewHandle);
+      return Status;
+    }
+
+    ASSERT(LoadedImage->LoadOptionsSize == 0);
+
+    //
+    // Install a shell parameters protocol on the image.
+    //
+    Status = gBS->InstallProtocolInterface(
+      &NewHandle,
+      &gEfiShellParametersProtocolGuid,
+      EFI_NATIVE_INTERFACE,
+      ShellInfoObject.NewShellParametersProtocol);
+    ASSERT_EFI_ERROR(Status);
+
+    //
+    // Now start the image.
+    //
+    if (!EFI_ERROR(Status)) {
+      Status = gBS->StartImage(
+        NewHandle,
+        0,
+        NULL);
+
+      CleanupStatus = gBS->UninstallProtocolInterface(
+                            NewHandle,
+                            &gEfiShellParametersProtocolGuid,
+                            ShellInfoObject.NewShellParametersProtocol);
+
+      // Print a new line for applications that forgot to do so.
+      ShellPrintEx(-1, -1, L"\r\n");
+      ASSERT_EFI_ERROR(CleanupStatus);
+      return Status;
+    }
+
+    // Unload image - We should only get here if we didn't call StartImage.
+    gBS->UnloadImage(NewHandle);
+  }
+
+  return Status;
+}
+
+CONST CHAR16*
+EFIAPI
+RtnicGetManFileName (
+  VOID
+  )
+{
+  return L"";
+}
 
 
 /**
@@ -601,6 +742,25 @@ UefiMain (
       }
 
       if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit() && (PcdGet8(PcdShellSupportLevel) >= 3 || PcdGetBool(PcdShellForceConsole)) && !EFI_ERROR(Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
+
+        ShellCommandRegisterCommandName(L"rtnic",                         //*CommandString,
+                                        &Trampoline,                      //CommandHandler,
+                                        RtnicGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_GET_HELP_RTNIC)  //ManFormatHelp
+                                      );
+        if (Status == EFI_SUCCESS) {
+          //
+          // Uncomment the following line to run embedded application on startup
+          //
+          //RunCommand(L"rtnic /efuse /r");
+        } else {
+          ShellPrintEx(-1, -1, L"\r\nShellCommandRegisterCommandName error: %x\r\n", Status);
+        }
+
         //
         // begin the UI waiting loop
         //

@@ -317,7 +317,8 @@ InternalEfiShellStartCtrlSMonitor(
 }
 
 /**
-  internal worker function to load and run an image via memory-mapped device path.
+  Internal worker function to load and run an image via memory-mapped device path.
+  It is slightly modified InternalShellExecuteDevicePath() from ShellProtocol.c.
 
   @param ParentImageHandle      A handle of the image that is executing the specified
                                 command line.
@@ -332,11 +333,11 @@ InternalEfiShellStartCtrlSMonitor(
 
   @param[out] StartImageStatus  Returned status from gBS->StartImage.
 
-  @retval EFI_SUCCESS       The command executed successfully. The status code
-                            returned by the command is pointed to by StatusCode.
+  @retval EFI_SUCCESS           The command executed successfully. The status code
+                                returned by the command is pointed to by StatusCode.
   @retval EFI_INVALID_PARAMETER The parameters are invalid.
-  @retval EFI_OUT_OF_RESOURCES Out of resources.
-  @retval EFI_UNSUPPORTED   Nested shell invocations are not allowed.
+  @retval EFI_OUT_OF_RESOURCES  Out of resources.
+  @retval EFI_UNSUPPORTED       Nested shell invocations are not allowed.
 **/
 EFI_STATUS
 ShellExecuteMemoryDevicePath(

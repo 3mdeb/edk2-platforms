@@ -160,7 +160,7 @@ FV = FVMAIN_COMPACT
   #
 $(FLASH_REGION_BINARY_FIRMWARE_OFFSET)|$(FLASH_REGION_BINARY_FIRMWARE_SIZE)
 gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase|gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize
-FILE = dummy.efi
+FILE = hello_world.efi
 
   #
   # FV Recovery#2

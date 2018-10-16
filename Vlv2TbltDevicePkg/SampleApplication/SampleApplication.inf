@@ -1,5 +1,9 @@
 ## @file
-#  Sample UEFI Application 
+#
+#  Sample UEFI Application
+#
+#  Copyright (c) 2018, CMR Surgical Limited
+#
 ##
 
 [Defines]

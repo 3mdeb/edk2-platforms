@@ -357,7 +357,17 @@ ShellExecuteMemoryMappedBinary(
   MemPath[0].Header.Length[0] = (UINT8)sizeof(MEMMAP_DEVICE_PATH);
   MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH) >> 8);
   MemPath[0].MemoryType = EfiLoaderCode;
-  MemPath[0].StartingAddress = PcdGet32(PcdBiosRomBase) + PcdGet32(PcdFlashBinFwBase);
+
+  //
+  // When building standalone package PcdFlashBinFwBase is offset relative
+  // to PcdBiosRomBase. In the case of building whole image PcdFlashBinFwBase
+  // is fixed during parsing of PlatformPkgGcc.fdf and is already an address
+  // in the memory space.
+  //
+  MemPath[0].StartingAddress = PcdGet32(PcdFlashBinFwBase);
+  if (MemPath[0].StartingAddress < PcdGet32(PcdBiosRomBase)) {
+    MemPath[0].StartingAddress += PcdGet32(PcdBiosRomBase);
+  }
   MemPath[0].EndingAddress = MemPath[0].StartingAddress + PcdGet32(PcdFlashBinFwSize);
 
   MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;

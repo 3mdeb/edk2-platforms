@@ -99,6 +99,7 @@
   gEfiHiiPackageListProtocolGuid                          ## SOMETIMES_PRODUCES
 
 [FixedPcd]
+  gPlatformModuleTokenSpaceGuid.PcdBiosRomBase               ## CONSUMES
   gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase            ## CONSUMES
   gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize            ## CONSUMES
 

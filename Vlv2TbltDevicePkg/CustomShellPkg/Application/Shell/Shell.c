@@ -322,14 +322,9 @@ InternalEfiShellStartCtrlSMonitor(
 
   @param ParentImageHandle      A handle of the image that is executing the specified
                                 command line.
-  @param DevicePath             device path of the file to execute
   @param CommandLine            Points to the NULL-terminated UCS-2 encoded string
                                 containing the command line. If NULL then the command-
                                 line will be empty.
-  @param Environment            Points to a NULL-terminated array of environment
-                                variables with the format 'x=y', where x is the
-                                environment variable name and y is the value. If this
-                                is NULL, then the current shell environment is used.
 
   @param[out] StartImageStatus  Returned status from gBS->StartImage.
 
@@ -340,11 +335,9 @@ InternalEfiShellStartCtrlSMonitor(
   @retval EFI_UNSUPPORTED       Nested shell invocations are not allowed.
 **/
 EFI_STATUS
-ShellExecuteMemoryDevicePath(
+ShellExecuteMemoryMappedBinary(
   IN CONST EFI_HANDLE               *ParentImageHandle,
-  IN CONST MEMMAP_DEVICE_PATH       *DevicePath,
-  IN CONST CHAR16                   *CommandLine OPTIONAL,
-  IN CONST CHAR16                   **Environment OPTIONAL,
+  IN CONST CHAR16                   *CommandLine,
   OUT EFI_STATUS                    *StartImageStatus OPTIONAL
   )
 {
@@ -353,18 +346,29 @@ ShellExecuteMemoryDevicePath(
   EFI_STATUS                    CleanupStatus;
   EFI_HANDLE                    NewHandle;
   EFI_LOADED_IMAGE_PROTOCOL     *LoadedImage;
-  LIST_ENTRY                    OrigEnvs;
   EFI_SHELL_PARAMETERS_PROTOCOL ShellParamsProtocol;
   CHAR16                        *ImagePath;
   UINTN                         Index;
-  CHAR16                        *Walker;
   CHAR16                        *NewCmdLine;
+  MEMMAP_DEVICE_PATH            MemPath[2];
+
+  MemPath[0].Header.Type = HARDWARE_DEVICE_PATH;
+  MemPath[0].Header.SubType = HW_MEMMAP_DP;
+  MemPath[0].Header.Length[0] = (UINT8)sizeof(MEMMAP_DEVICE_PATH);
+  MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH) >> 8);
+  MemPath[0].MemoryType = EfiLoaderCode;
+  MemPath[0].StartingAddress = PcdGet32(PcdBiosRomBase) + PcdGet32(PcdFlashBinFwBase);
+  MemPath[0].EndingAddress = MemPath[0].StartingAddress + PcdGet32(PcdFlashBinFwSize);
+
+  MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
+  MemPath[1].Header.SubType = END_INSTANCE_DEVICE_PATH_SUBTYPE;
+  MemPath[1].Header.Length[0] = (UINT8)sizeof(EFI_DEVICE_PATH);
+  MemPath[1].Header.Length[1] = (UINT8)(sizeof(EFI_DEVICE_PATH) >> 8);
 
   if (ParentImageHandle == NULL) {
-    return (EFI_INVALID_PARAMETER);
+    return EFI_INVALID_PARAMETER;
   }
 
-  InitializeListHead(&OrigEnvs);
   ZeroMem(&ShellParamsProtocol, sizeof(EFI_SHELL_PARAMETERS_PROTOCOL));
 
   NewHandle = NULL;
@@ -372,12 +376,6 @@ ShellExecuteMemoryDevicePath(
   NewCmdLine = AllocateCopyPool (StrSize (CommandLine), CommandLine);
   if (NewCmdLine == NULL) {
     return EFI_OUT_OF_RESOURCES;
-  }
-
-  for (Walker = NewCmdLine; Walker != NULL && *Walker != CHAR_NULL ; Walker++) {
-    if (*Walker == L'^' && *(Walker+1) == L'#') {
-      CopyMem(Walker, Walker+1, StrSize(Walker) - sizeof(Walker[0]));
-    }
   }
 
   //
@@ -388,9 +386,9 @@ ShellExecuteMemoryDevicePath(
   Status = gBS->LoadImage(
     FALSE,
     *ParentImageHandle,
-    (EFI_DEVICE_PATH_PROTOCOL*)DevicePath,
-    (VOID*) ((UINTN)(DevicePath[0].StartingAddress)),
-    DevicePath[0].EndingAddress - DevicePath[0].StartingAddress,
+    (EFI_DEVICE_PATH_PROTOCOL*)MemPath,
+    (VOID*) ((UINTN)(MemPath[0].StartingAddress)),
+    MemPath[0].EndingAddress - MemPath[0].StartingAddress,
     &NewHandle);
 
   if (EFI_ERROR(Status)) {
@@ -398,7 +396,7 @@ ShellExecuteMemoryDevicePath(
       gBS->UnloadImage(NewHandle);
     }
     FreePool (NewCmdLine);
-    return (Status);
+    return Status;
   }
   Status = gBS->OpenProtocol(
     NewHandle,
@@ -418,26 +416,13 @@ ShellExecuteMemoryDevicePath(
         -1,
         NULL,
         STRING_TOKEN (STR_SHELL_IMAGE_NOT_APP),
-        ShellInfoObject.HiiHandle
-      );
+        ShellInfoObject.HiiHandle);
       goto UnloadImage;
     }
 
     ASSERT(LoadedImage->LoadOptionsSize == 0);
-    if (NewCmdLine != NULL) {
-      LoadedImage->LoadOptionsSize  = (UINT32)StrSize(NewCmdLine);
-      LoadedImage->LoadOptions      = (VOID*)NewCmdLine;
-    }
-
-    //
-    // Save our current environment settings for later restoration if necessary
-    //
-    if (Environment != NULL) {
-      Status = GetEnvironmentVariableList(&OrigEnvs);
-      if (!EFI_ERROR(Status)) {
-        Status = SetEnvironmentVariables(Environment);
-      }
-    }
+    LoadedImage->LoadOptionsSize  = (UINT32)StrSize(NewCmdLine);
+    LoadedImage->LoadOptions      = (VOID*)NewCmdLine;
 
     //
     // Initialize and install a shell parameters protocol on the image.
@@ -445,7 +430,12 @@ ShellExecuteMemoryDevicePath(
     ShellParamsProtocol.StdIn   = ShellInfoObject.NewShellParametersProtocol->StdIn;
     ShellParamsProtocol.StdOut  = ShellInfoObject.NewShellParametersProtocol->StdOut;
     ShellParamsProtocol.StdErr  = ShellInfoObject.NewShellParametersProtocol->StdErr;
-    Status = UpdateArgcArgv(&ShellParamsProtocol, NewCmdLine, Efi_Application, NULL, NULL);
+    Status = UpdateArgcArgv(
+      &ShellParamsProtocol,
+      NewCmdLine,
+      Efi_Application,
+      NULL,
+      NULL);
     ASSERT_EFI_ERROR(Status);
     //
     // Replace Argv[0] with the full path of the binary we're executing:
@@ -453,7 +443,7 @@ ShellExecuteMemoryDevicePath(
     // "The first entry in [Argv] is always the full file path of the
     //  executable" - UEFI Shell Spec section 2.3
     //
-    ImagePath = EfiShellGetFilePathFromDevicePath ((EFI_DEVICE_PATH_PROTOCOL*)DevicePath);
+    ImagePath = EfiShellGetFilePathFromDevicePath((EFI_DEVICE_PATH_PROTOCOL*)MemPath);
     // The image we're executing isn't necessarily in a filesystem - it might
     // be memory mapped. In this case EfiShellGetFilePathFromDevicePath will
     // return NULL, and we'll leave Argv[0] as UpdateArgcArgv set it.
@@ -461,7 +451,7 @@ ShellExecuteMemoryDevicePath(
       if (ShellParamsProtocol.Argv == NULL) {
         // Command line was empty or null.
         // (UpdateArgcArgv sets Argv to NULL when CommandLine is "" or NULL)
-        ShellParamsProtocol.Argv = AllocatePool (sizeof (CHAR16 *));
+        ShellParamsProtocol.Argv = AllocatePool(sizeof (CHAR16 *));
         if (ShellParamsProtocol.Argv == NULL) {
           Status = EFI_OUT_OF_RESOURCES;
           goto UnloadImage;
@@ -469,15 +459,17 @@ ShellExecuteMemoryDevicePath(
         ShellParamsProtocol.Argc = 1;
       } else {
         // Free the string UpdateArgcArgv put in Argv[0];
-        FreePool (ShellParamsProtocol.Argv[0]);
+        FreePool(ShellParamsProtocol.Argv[0]);
       }
       ShellParamsProtocol.Argv[0] = ImagePath;
     }
 
-    Status = gBS->InstallProtocolInterface(&NewHandle, &gEfiShellParametersProtocolGuid, EFI_NATIVE_INTERFACE, &ShellParamsProtocol);
+    Status = gBS->InstallProtocolInterface(
+      &NewHandle,
+      &gEfiShellParametersProtocolGuid,
+      EFI_NATIVE_INTERFACE,
+      &ShellParamsProtocol);
     ASSERT_EFI_ERROR(Status);
-
-    ///@todo initialize and install ShellInterface protocol on the new image for compatibility if - PcdGetBool(PcdShellSupportOldProtocols)
 
     //
     // now start the image and if the caller wanted the return code pass it to them...
@@ -486,8 +478,7 @@ ShellExecuteMemoryDevicePath(
       StartStatus      = gBS->StartImage(
                           NewHandle,
                           0,
-                          NULL
-                          );
+                          NULL);
       if (StartImageStatus != NULL) {
         *StartImageStatus = StartStatus;
       }
@@ -495,8 +486,7 @@ ShellExecuteMemoryDevicePath(
       CleanupStatus = gBS->UninstallProtocolInterface(
                             NewHandle,
                             &gEfiShellParametersProtocolGuid,
-                            &ShellParamsProtocol
-                            );
+                            &ShellParamsProtocol);
       ASSERT_EFI_ERROR(CleanupStatus);
 
       goto FreeAlloc;
@@ -504,29 +494,23 @@ ShellExecuteMemoryDevicePath(
 
 UnloadImage:
     // Unload image - We should only get here if we didn't call StartImage
-    gBS->UnloadImage (NewHandle);
+    gBS->UnloadImage(NewHandle);
 
 FreeAlloc:
     // Free Argv (Allocated in UpdateArgcArgv)
     if (ShellParamsProtocol.Argv != NULL) {
       for (Index = 0; Index < ShellParamsProtocol.Argc; Index++) {
         if (ShellParamsProtocol.Argv[Index] != NULL) {
-          FreePool (ShellParamsProtocol.Argv[Index]);
+          FreePool(ShellParamsProtocol.Argv[Index]);
         }
       }
-      FreePool (ShellParamsProtocol.Argv);
+      FreePool(ShellParamsProtocol.Argv);
     }
   }
 
-  // Restore environment variables
-  if (!IsListEmpty(&OrigEnvs)) {
-    CleanupStatus = SetEnvironmentVariableList(&OrigEnvs);
-    ASSERT_EFI_ERROR (CleanupStatus);
-  }
+  FreePool(NewCmdLine);
 
-  FreePool (NewCmdLine);
-
-  return(Status);
+  return Status;
 }
 
 
@@ -556,21 +540,7 @@ UefiMain (
   EFI_SIMPLE_TEXT_INPUT_PROTOCOL  *OldConIn;
   SPLIT_LIST                      *Split;
   EFI_STATUS                      StartImageStatus;
-  MEMMAP_DEVICE_PATH              MemPath[2];
   CHAR16                          *CommandLine = L"RTNicPgX32.efi /efuse /r";
-
-  MemPath[0].Header.Type = HARDWARE_DEVICE_PATH;
-  MemPath[0].Header.SubType = HW_MEMMAP_DP;
-  MemPath[0].Header.Length[0] = (UINT8)sizeof(MEMMAP_DEVICE_PATH);
-  MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH)>> 8);
-  MemPath[0].MemoryType = EfiLoaderCode;
-  MemPath[0].StartingAddress = PcdGet32(PcdFlashBinFwBase);
-  MemPath[0].EndingAddress = MemPath[0].StartingAddress + PcdGet32(PcdFlashBinFwSize);
-
-  MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
-  MemPath[1].Header.SubType = END_INSTANCE_DEVICE_PATH_SUBTYPE;
-  MemPath[1].Header.Length[0] = (UINT8)sizeof(EFI_DEVICE_PATH);
-  MemPath[1].Header.Length[1] = (UINT8)(sizeof(EFI_DEVICE_PATH)>> 8);
 
   if (PcdGet8(PcdShellSupportLevel) > 3) {
     return (EFI_UNSUPPORTED);
@@ -832,7 +802,7 @@ UefiMain (
       }
 
       if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit() && (PcdGet8(PcdShellSupportLevel) >= 3 || PcdGetBool(PcdShellForceConsole)) && !EFI_ERROR(Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
-        Status = ShellExecuteMemoryDevicePath(&ImageHandle, MemPath, CommandLine, NULL, &StartImageStatus);
+        Status = ShellExecuteMemoryMappedBinary(&ImageHandle, CommandLine, &StartImageStatus);
         if (Status == EFI_SUCCESS) {
           ShellPrintEx(-1, -1, L"\r\n'%s' returned %x\r\n", CommandLine, StartImageStatus);
         } else {

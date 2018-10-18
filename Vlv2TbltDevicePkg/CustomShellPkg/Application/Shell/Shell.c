@@ -485,10 +485,10 @@ ShellExecuteMemoryMappedBinary(
     // now start the image and if the caller wanted the return code pass it to them...
     //
     if (!EFI_ERROR(Status)) {
-      StartStatus      = gBS->StartImage(
-                          NewHandle,
-                          0,
-                          NULL);
+      StartStatus = gBS->StartImage(
+        NewHandle,
+        0,
+        NULL);
       if (StartImageStatus != NULL) {
         *StartImageStatus = StartStatus;
       }

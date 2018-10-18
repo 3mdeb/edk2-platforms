@@ -1861,7 +1861,7 @@ MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteSmmDxe.inf
   FileHandleLib|MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
 
 [Components.IA32]
-  ShellPkg/Application/Shell/Shell.inf {
+  Vlv2TbltDevicePkg/CustomShellPkg/Application/Shell/Shell.inf {
 
     #------------------------------
     #  Basic commands
@@ -1906,3 +1906,4 @@ MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteSmmDxe.inf
       ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf
       SortLib|MdeModulePkg/Library/UefiSortLib/UefiSortLib.inf
   }
+  Vlv2TbltDevicePkg/SampleApplication/SampleApplication.inf

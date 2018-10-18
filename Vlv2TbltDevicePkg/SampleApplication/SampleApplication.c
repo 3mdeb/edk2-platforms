@@ -41,21 +41,20 @@ UefiMain (
 
   Print(L"SampleApplication\n");
 
-  Status = gBS->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, (void**)&LoadedImage);
+  Status = gBS->HandleProtocol(
+          ImageHandle,
+          &gEfiLoadedImageProtocolGuid,
+          (VOID **) &LoadedImage);
   if (Status == EFI_SUCCESS) {
     Print(L"LoadOptions: %s\n", (CHAR16 *)LoadedImage->LoadOptions);
   } else {
     Print(L"LoadedImageProtocol: error %x\n", Status & !0x80000000);
   }
 
-  Status = gBS->OpenProtocol (
+  Status = gBS->HandleProtocol(
           ImageHandle,
           &gEfiShellParametersProtocolGuid,
-          (VOID **) &ShellParameters,
-          ImageHandle,
-          NULL,
-          EFI_OPEN_PROTOCOL_GET_PROTOCOL
-         );
+          (VOID **) &ShellParameters);
 
   if (Status == EFI_SUCCESS) {
     for (i = 0; i < ShellParameters->Argc; i++) {

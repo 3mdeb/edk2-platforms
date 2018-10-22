@@ -3,6 +3,7 @@
 #
 #  (C) Copyright 2013 Hewlett-Packard Development Company, L.P.<BR>
 #  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2018, CMR Surgical Limited.<BR>
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -17,7 +18,7 @@
 [Defines]
   INF_VERSION                    = 0x00010006
   BASE_NAME                      = Shell
-  FILE_GUID                      = 7C04A583-9E3E-4f1c-AD65-E05268D0B4D1 # gUefiShellFileGuid
+  FILE_GUID                      = C57AD6B7-0515-40A8-9D21-551652854E37 # gUefiShellFileGuid
   MODULE_TYPE                    = UEFI_APPLICATION
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = UefiMain
@@ -50,7 +51,8 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  ShellPkg/ShellPkg.dec
+  Vlv2TbltDevicePkg/CustomShellPkg/ShellPkg.dec
+  Vlv2TbltDevicePkg/PlatformPkg.dec
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
@@ -95,6 +97,11 @@
   gEfiUnicodeCollation2ProtocolGuid                       ## CONSUMES
   gEfiDevicePathProtocolGuid                              ## CONSUMES
   gEfiHiiPackageListProtocolGuid                          ## SOMETIMES_PRODUCES
+
+[FixedPcd]
+  gPlatformModuleTokenSpaceGuid.PcdBiosRomBase               ## CONSUMES
+  gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase            ## CONSUMES
+  gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize            ## CONSUMES
 
 [Pcd]
   gEfiShellPkgTokenSpaceGuid.PcdShellSupportLevel           ## CONSUMES

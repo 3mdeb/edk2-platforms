@@ -3,6 +3,7 @@
 #
 # (C) Copyright 2013-2014 Hewlett-Packard Development Company, L.P.<BR>
 # Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2018, CMR Surgical Limited.<BR>
 #
 # This program and the accompanying materials are licensed and made available under
 # the terms and conditions of the BSD License which accompanies this distribution.
@@ -21,7 +22,7 @@
   PACKAGE_VERSION                = 1.01
 
 [Includes]
-  Include
+  ShellPkg/Include
 
 [LibraryClasses]
   ##  @libraryclass  Provides most Shell APIs. Only available for Shell applications
@@ -57,8 +58,8 @@
   gShellTftpHiiGuid               = {0x738a9314, 0x82c1, 0x4592, {0x8f, 0xf7, 0xc1, 0xbd, 0xf1, 0xb2, 0x0e, 0xd4}}
   gShellBcfgHiiGuid               = {0x5f5f605d, 0x1583, 0x4a2d, {0xa6, 0xb2, 0xeb, 0x12, 0xda, 0xb4, 0xa2, 0xb6}}
 
-  # FILE_GUID as defined in ShellPkg/Application/Shell/Shell.inf
-  gUefiShellFileGuid              = {0x7c04a583, 0x9e3e, 0x4f1c, {0xad, 0x65, 0xe0, 0x52, 0x68, 0xd0, 0xb4, 0xd1}}
+  # FILE_GUID as defined in Vlv2TbltDevicePkg/CustomShellPkg/Application/Shell/Shell.inf
+  gUefiShellFileGuid              = {0xc57ad6b7, 0x0515, 0x40a8, {0x9d, 0x21, 0x55, 0x16, 0x52, 0x85, 0x4e, 0x37}}
 
 [Protocols]
   gEfiShellEnvironment2Guid           = {0x47c7b221, 0xc42a, 0x11d2, {0x8e, 0x57, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b}}

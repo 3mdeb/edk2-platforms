@@ -37,6 +37,7 @@ UefiMain (
   EFI_GUID                       gEfiLoadedImageProtocolGuid      = LOADED_IMAGE_PROTOCOL;
   EFI_GUID                       gEfiShellParametersProtocolGuid  = EFI_SHELL_PARAMETERS_PROTOCOL_GUID;
   EFI_SHELL_PARAMETERS_PROTOCOL  *ShellParameters;
+  EFI_INPUT_KEY                  Key;
   UINTN i;
 
   Print(L"SampleApplication\n");
@@ -48,7 +49,7 @@ UefiMain (
   if (Status == EFI_SUCCESS) {
     Print(L"LoadOptions: %s\n", (CHAR16 *)LoadedImage->LoadOptions);
   } else {
-    Print(L"LoadedImageProtocol: error %x\n", Status & !0x80000000);
+    Print(L"LoadedImageProtocol: error %x\n", Status & ~0x80000000);
   }
 
   Status = gBS->HandleProtocol(
@@ -61,10 +62,14 @@ UefiMain (
       Print(L"Argv[%d]: %s\n", i, ShellParameters->Argv[i]);
     }
   } else {
-    Print(L"ShellParametersProtocol: error %x\n", Status & !0x80000000);
+    Print(L"ShellParametersProtocol: error %x\n", Status & ~0x80000000);
   }
 
-  return Status;
+  Print(L"Press any key to continue...\n");
 
-  return EFI_SUCCESS;
+  do {
+    Status = SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &Key);
+  } while (EFI_ERROR(Status));
+
+  return Status;
 }

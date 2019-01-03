@@ -328,7 +328,8 @@ InternalEfiShellStartCtrlSMonitor(
   @retval EFI_UNSUPPORTED       Nested shell invocations are not allowed.
   @retval other                 Return value of underlying application.
 **/
-EFI_STATUS
+SHELL_STATUS
+EFIAPI
 Trampoline(
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable

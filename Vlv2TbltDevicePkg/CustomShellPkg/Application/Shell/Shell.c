@@ -449,6 +449,33 @@ Trampoline(
   return Status;
 }
 
+SHELL_STATUS
+EFIAPI
+TestBF(
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  UINTN rax = 0xbf00;
+
+  ShellPrintEx(-1, -1, L"Testing for Bareflank: ");
+
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  if (rax == 0xbf01) {
+    ShellPrintEx(-1, -1, L"success\r\n");
+  } else {
+    ShellPrintEx(-1, -1, L"error (%x)\r\n\
+        Trying vmcall (this will hang if Bareflank isn't started): ", rax);
+    asm volatile ("vmcall\n\t");
+    ShellPrintEx(-1, -1, L"success\r\n");
+  }
+
+  return SHELL_SUCCESS;
+}
+
 CONST CHAR16*
 EFIAPI
 RtnicGetManFileName (
@@ -761,6 +788,16 @@ UefiMain (
         } else {
           ShellPrintEx(-1, -1, L"\r\nShellCommandRegisterCommandName error: %x\r\n", Status);
         }
+
+        ShellCommandRegisterCommandName(L"testbf",                        //*CommandString,
+                                        &TestBF,                          //CommandHandler,
+                                        RtnicGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
 
         //
         // begin the UI waiting loop

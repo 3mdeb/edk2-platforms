@@ -658,6 +658,13 @@ FILE DRIVER = 961578FE-B6B7-44c3-AF35-6BC705CD2B1F {
   }
 
 #
+# Bareflank
+#
+FILE APPLICATION = 78563412-3412-7856-9012-123456789012 {
+    SECTION PE32 = bareflank.efi
+  }
+
+#
 # UEFI Shell
 #
 INF Vlv2TbltDevicePkg/CustomShellPkg/Application/Shell/Shell.inf

@@ -15,6 +15,9 @@
 **/
 
 #include "Shell.h"
+#include <Pi/PiFirmwareVolume.h>
+#include <Pi/PiFirmwareFile.h>
+#include <Protocol/FirmwareVolume2.h>
 
 //
 // Initialize the global structure
@@ -315,6 +318,184 @@ InternalEfiShellStartCtrlSMonitor(
   return (Status);
 }
 
+SHELL_STATUS
+EFIAPI
+TrampolineBareflank(
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_GUID BareflankGuid = {0x78563412, 0x3412, 0x7856, {0x90, 0x12, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12}};  //TODO: use proper GUID
+  EFI_STATUS                      Status;
+  EFI_STATUS                      CleanupStatus;
+  EFI_HANDLE                      NewHandle;
+  EFI_LOADED_IMAGE_PROTOCOL       *LoadedImage;
+  MEMMAP_DEVICE_PATH              MemPath[2];
+  UINTN                           FvHandleCount;
+  EFI_HANDLE                      *FvHandleBuffer;
+  EFI_FV_FILETYPE                 Type;
+  UINTN                           Size;
+  EFI_FV_FILE_ATTRIBUTES          Attributes;
+  UINT32                          AuthenticationStatus;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL   *Fv;
+  VOID                            *Buffer;
+  UINTN                           i;
+
+  Buffer = NULL;
+
+  gBS->LocateHandleBuffer (
+        ByProtocol,
+        &gEfiFirmwareVolume2ProtocolGuid,
+        NULL,
+        &FvHandleCount,
+        &FvHandleBuffer
+        );
+  for (i = 0; i < FvHandleCount; i++) {
+    gBS->HandleProtocol (
+          FvHandleBuffer[i],
+          &gEfiFirmwareVolume2ProtocolGuid,
+          (VOID **) &Fv
+          );
+
+    Status = Fv->ReadFile (
+          Fv,
+          &BareflankGuid,
+          &Buffer,
+          &Size,
+          &Type,
+          &Attributes,
+          &AuthenticationStatus
+          );
+    if (Status == EFI_NOT_FOUND) {
+      Print(L"Image not found in Fv[%d]\n", i);
+      continue;
+    }
+    else if (Status == EFI_SUCCESS) {
+      Print(L"Image found in Fv[%d]\n", i);
+      Print(L"\tBuffer %x\n", Buffer);
+      Print(L"\tSize %x\n", Size);
+      Print(L"\tType %x\n", Type);
+      Print(L"\tAttributes %x\n", Attributes);
+      Print(L"\tAuthenticationStatus %x\n", AuthenticationStatus);
+      break;
+    }
+    else {
+      Print(L"Error in Fv[%d]: %d\n", i, Status & ~0x80000000);
+    }
+  }
+
+  if (Buffer == NULL) {
+    Print(L"Image not found in any Fv\n");
+    return SHELL_NOT_FOUND;
+  }
+
+  MemPath[0].Header.Type = HARDWARE_DEVICE_PATH;
+  MemPath[0].Header.SubType = HW_MEMMAP_DP;
+  MemPath[0].Header.Length[0] = (UINT8)sizeof(MEMMAP_DEVICE_PATH);
+  MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH) >> 8);
+  MemPath[0].MemoryType = EfiLoaderCode;
+
+  // Buffer+4 - header of PE32 **section**. TODO: is it defined anywhere in the code?
+  MemPath[0].StartingAddress = ((UINTN)Buffer)+4;
+  MemPath[0].EndingAddress = MemPath[0].StartingAddress + Size;
+
+  MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
+  MemPath[1].Header.SubType = END_INSTANCE_DEVICE_PATH_SUBTYPE;
+  MemPath[1].Header.Length[0] = (UINT8)sizeof(EFI_DEVICE_PATH);
+  MemPath[1].Header.Length[1] = (UINT8)(sizeof(EFI_DEVICE_PATH) >> 8);
+
+  ImageHandle = gImageHandle;
+  NewHandle = NULL;
+
+  //
+  // Load the image with:
+  // FALSE - not from boot manager,
+  // address and size of memory region where the image is located.
+  //
+  Status = gBS->LoadImage(
+    FALSE,
+    ImageHandle,
+    (EFI_DEVICE_PATH_PROTOCOL*)MemPath,
+    (VOID*) ((UINTN)(MemPath[0].StartingAddress)),
+    MemPath[0].EndingAddress - MemPath[0].StartingAddress,
+    &NewHandle);
+
+  if (EFI_ERROR(Status)) {
+    if (NewHandle != NULL) {
+      gBS->UnloadImage(NewHandle);
+    }
+    return Status;
+  }
+  Status = gBS->OpenProtocol(
+    NewHandle,
+    &gEfiLoadedImageProtocolGuid,
+    (VOID**)&LoadedImage,
+    ImageHandle,
+    NULL,
+    EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+  if (!EFI_ERROR(Status)) {
+    //
+    // If the image is not an app abort it.
+    //
+    if (LoadedImage->ImageCodeType != EfiLoaderCode){
+      ShellPrintHiiEx(
+        -1,
+        -1,
+        NULL,
+        STRING_TOKEN (STR_SHELL_IMAGE_NOT_APP),
+        ShellInfoObject.HiiHandle);
+
+      gBS->UnloadImage(NewHandle);
+      return Status;
+    }
+
+    ASSERT(LoadedImage->LoadOptionsSize == 0);
+
+    //
+    // Install a shell parameters protocol on the image.
+    //
+    Status = gBS->InstallProtocolInterface(
+      &NewHandle,
+      &gEfiShellParametersProtocolGuid,
+      EFI_NATIVE_INTERFACE,
+      ShellInfoObject.NewShellParametersProtocol);
+    ASSERT_EFI_ERROR(Status);
+
+    //
+    // Now start the image.
+    //
+    if (!EFI_ERROR(Status)) {
+      Status = gBS->StartImage(
+        NewHandle,
+        0,
+        NULL);
+
+      CleanupStatus = gBS->UninstallProtocolInterface(
+                            NewHandle,
+                            &gEfiShellParametersProtocolGuid,
+                            ShellInfoObject.NewShellParametersProtocol);
+
+      // Print a new line for applications that forgot to do so.
+      ShellPrintEx(-1, -1, L"\r\n");
+      ASSERT_EFI_ERROR(CleanupStatus);
+      return Status;
+    }
+
+    // Unload image - We should only get here if we didn't call StartImage.
+    gBS->UnloadImage(NewHandle);
+  }
+
+  // TODO: should Buffer be deallocated? When? How?
+  /*
+   * ReadFile() will allocate an appropriately sized buffer from boot services
+   * pool memory, which will be returned in *Buffer. The size of the new buffer
+   * is returned in *BufferSize
+   */
+
+  return Status;
+}
+
 /**
   Internal worker function to load and run an image via memory-mapped device path.
   It is a modified InternalShellExecuteDevicePath() from ShellProtocol.c, tailored
@@ -328,7 +509,8 @@ InternalEfiShellStartCtrlSMonitor(
   @retval EFI_UNSUPPORTED       Nested shell invocations are not allowed.
   @retval other                 Return value of underlying application.
 **/
-EFI_STATUS
+SHELL_STATUS
+EFIAPI
 Trampoline(
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
@@ -446,6 +628,33 @@ Trampoline(
   }
 
   return Status;
+}
+
+SHELL_STATUS
+EFIAPI
+TestBF(
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  UINTN rax = 0xbf00;
+
+  ShellPrintEx(-1, -1, L"Testing for Bareflank: ");
+
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  if (rax == 0xbf01) {
+    ShellPrintEx(-1, -1, L"success\r\n");
+  } else {
+    ShellPrintEx(-1, -1, L"error (%x)\r\n\
+        Trying vmcall (this will hang if Bareflank isn't started): ", rax);
+    asm volatile ("vmcall\n\t");
+    ShellPrintEx(-1, -1, L"success\r\n");
+  }
+
+  return SHELL_SUCCESS;
 }
 
 CONST CHAR16*
@@ -760,6 +969,26 @@ UefiMain (
         } else {
           ShellPrintEx(-1, -1, L"\r\nShellCommandRegisterCommandName error: %x\r\n", Status);
         }
+
+        ShellCommandRegisterCommandName(L"bareflank",                     //*CommandString,
+                                        &TrampolineBareflank,             //CommandHandler,
+                                        RtnicGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
+
+        ShellCommandRegisterCommandName(L"testbf",                        //*CommandString,
+                                        &TestBF,                          //CommandHandler,
+                                        RtnicGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
 
         //
         // begin the UI waiting loop

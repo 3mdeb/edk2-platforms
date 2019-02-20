@@ -325,7 +325,7 @@ TrampolineBareflank(
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_GUID BareflankGuid = {0x78563412, 0x3412, 0x7856, {0x90, 0x12, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12}};  //TODO: use proper GUID
+  EFI_GUID BareflankGuid = {0xcd018687, 0xb2c0, 0x4099, {0xb7, 0xc1, 0x0f, 0xda, 0xe2, 0xf7, 0xd0, 0x97}};
   EFI_STATUS                      Status;
   EFI_STATUS                      CleanupStatus;
   EFI_HANDLE                      NewHandle;
@@ -333,9 +333,7 @@ TrampolineBareflank(
   MEMMAP_DEVICE_PATH              MemPath[2];
   UINTN                           FvHandleCount;
   EFI_HANDLE                      *FvHandleBuffer;
-  EFI_FV_FILETYPE                 Type;
   UINTN                           Size;
-  EFI_FV_FILE_ATTRIBUTES          Attributes;
   UINT32                          AuthenticationStatus;
   EFI_FIRMWARE_VOLUME2_PROTOCOL   *Fv;
   VOID                            *Buffer;
@@ -357,26 +355,19 @@ TrampolineBareflank(
           (VOID **) &Fv
           );
 
-    Status = Fv->ReadFile (
+    Status = Fv->ReadSection(
           Fv,
           &BareflankGuid,
+          EFI_SECTION_PE32,
+          0,
           &Buffer,
           &Size,
-          &Type,
-          &Attributes,
           &AuthenticationStatus
           );
     if (Status == EFI_NOT_FOUND) {
-      Print(L"Image not found in Fv[%d]\n", i);
       continue;
     }
     else if (Status == EFI_SUCCESS) {
-      Print(L"Image found in Fv[%d]\n", i);
-      Print(L"\tBuffer %x\n", Buffer);
-      Print(L"\tSize %x\n", Size);
-      Print(L"\tType %x\n", Type);
-      Print(L"\tAttributes %x\n", Attributes);
-      Print(L"\tAuthenticationStatus %x\n", AuthenticationStatus);
       break;
     }
     else {
@@ -395,8 +386,7 @@ TrampolineBareflank(
   MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH) >> 8);
   MemPath[0].MemoryType = EfiLoaderCode;
 
-  // Buffer+4 - header of PE32 **section**. TODO: is it defined anywhere in the code?
-  MemPath[0].StartingAddress = ((UINTN)Buffer)+4;
+  MemPath[0].StartingAddress = ((UINTN)Buffer);
   MemPath[0].EndingAddress = MemPath[0].StartingAddress + Size;
 
   MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
@@ -705,7 +695,7 @@ It prints some text and does CPUID to talk to Bareflank based hypervisor.\n");
 
 CONST CHAR16*
 EFIAPI
-RtnicGetManFileName (
+DummyGetManFileName (
   VOID
   )
 {
@@ -998,27 +988,9 @@ UefiMain (
 
       if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit() && (PcdGet8(PcdShellSupportLevel) >= 3 || PcdGetBool(PcdShellForceConsole)) && !EFI_ERROR(Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
 
-        ShellCommandRegisterCommandName(L"rtnic",                         //*CommandString,
-                                        &Trampoline,                      //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
-                                        3,                                //ShellMinSupportLevel,
-                                        L"",                              //*ProfileName,
-                                        TRUE,                             //CanAffectLE,
-                                        ShellInfoObject.HiiHandle,        //HiiHandle,
-                                        STRING_TOKEN(STR_GET_HELP_RTNIC)  //ManFormatHelp
-                                      );
-        if (Status == EFI_SUCCESS) {
-          //
-          // Uncomment the following line to run embedded application on startup
-          //
-          //RunCommand(L"rtnic /efuse /r");
-        } else {
-          ShellPrintEx(-1, -1, L"\r\nShellCommandRegisterCommandName error: %x\r\n", Status);
-        }
-
         ShellCommandRegisterCommandName(L"bareflank",                     //*CommandString,
                                         &TrampolineBareflank,             //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
+                                        DummyGetManFileName,              //GetManFileName,
                                         3,                                //ShellMinSupportLevel,
                                         L"",                              //*ProfileName,
                                         TRUE,                             //CanAffectLE,
@@ -1028,7 +1000,7 @@ UefiMain (
 
         ShellCommandRegisterCommandName(L"cpuid",                         //*CommandString,
                                         &Cpuid,                           //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
+                                        DummyGetManFileName,              //GetManFileName,
                                         3,                                //ShellMinSupportLevel,
                                         L"",                              //*ProfileName,
                                         TRUE,                             //CanAffectLE,
@@ -1038,7 +1010,7 @@ UefiMain (
 
         ShellCommandRegisterCommandName(L"demo",                          //*CommandString,
                                         &Demo,                            //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
+                                        DummyGetManFileName,              //GetManFileName,
                                         3,                                //ShellMinSupportLevel,
                                         L"",                              //*ProfileName,
                                         TRUE,                             //CanAffectLE,

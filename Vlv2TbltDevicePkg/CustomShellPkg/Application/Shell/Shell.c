@@ -632,27 +632,73 @@ Trampoline(
 
 SHELL_STATUS
 EFIAPI
-TestBF(
+Cpuid(
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  UINTN rax = 0xbf00;
+  UINT64 rax;
+  EFI_STATUS Status;
 
-  ShellPrintEx(-1, -1, L"Testing for Bareflank: ");
+  if (ShellInfoObject.NewShellParametersProtocol->Argc < 2) {
+    ShellPrintEx(-1, -1, L"Not enough arguments\r\n");
+    return SHELL_INVALID_PARAMETER;
+  }
+
+  Status = StrHexToUint64S(ShellInfoObject.NewShellParametersProtocol->Argv[1],
+                            NULL, &rax);
+  if (Status != EFI_SUCCESS || rax == 0) {
+    ShellPrintEx(-1, -1, L"Not a valid hex number: %s\r\n",
+                  ShellInfoObject.NewShellParametersProtocol->Argv[1]);
+    return SHELL_INVALID_PARAMETER;
+  }
 
   asm volatile (
   "cpuid\n\t"
   : "+a"(rax));
 
-  if (rax == 0xbf01) {
-    ShellPrintEx(-1, -1, L"success\r\n");
-  } else {
-    ShellPrintEx(-1, -1, L"error (%x)\r\n\
-        Trying vmcall (this will hang if Bareflank isn't started): ", rax);
-    asm volatile ("vmcall\n\t");
-    ShellPrintEx(-1, -1, L"success\r\n");
-  }
+  return SHELL_SUCCESS;
+}
+
+SHELL_STATUS
+EFIAPI
+Demo(
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  UINT64 rax;
+
+  ShellPrintEx(-1, -1, L"This is sample application.\n\
+It prints some text and does CPUID to talk to Bareflank based hypervisor.\n");
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 1.\n");
+
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00101)\n");
+  rax = 0x4BF00101;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 2.\n");
+
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00102)\n");
+  rax = 0x4BF00102;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 3.\n");
+
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00100)\n");
+  rax = 0x4BF00100;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 4.\n");
+
+  ShellPrintEx(-1, -1, L"\n\nThat's all, returning to Shell.\n");
 
   return SHELL_SUCCESS;
 }
@@ -980,8 +1026,18 @@ UefiMain (
                                         STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
                                       );
 
-        ShellCommandRegisterCommandName(L"testbf",                        //*CommandString,
-                                        &TestBF,                          //CommandHandler,
+        ShellCommandRegisterCommandName(L"cpuid",                         //*CommandString,
+                                        &Cpuid,                           //CommandHandler,
+                                        RtnicGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
+
+        ShellCommandRegisterCommandName(L"demo",                          //*CommandString,
+                                        &Demo,                            //CommandHandler,
                                         RtnicGetManFileName,              //GetManFileName,
                                         3,                                //ShellMinSupportLevel,
                                         L"",                              //*ProfileName,

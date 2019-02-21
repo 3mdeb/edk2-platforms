@@ -663,7 +663,7 @@ Demo(
 It prints some text and does CPUID to talk to Bareflank based hypervisor.\n");
 
   ShellPrintEx(-1, -1, L"\nTest String Number 1.\n");
-
+  gBS->Stall (1000000);
   ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00101)\n");
   rax = 0x4BF00101;
   asm volatile (
@@ -671,7 +671,7 @@ It prints some text and does CPUID to talk to Bareflank based hypervisor.\n");
   : "+a"(rax));
 
   ShellPrintEx(-1, -1, L"\nTest String Number 2.\n");
-
+  gBS->Stall (1000000);
   ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00102)\n");
   rax = 0x4BF00102;
   asm volatile (
@@ -679,15 +679,31 @@ It prints some text and does CPUID to talk to Bareflank based hypervisor.\n");
   : "+a"(rax));
 
   ShellPrintEx(-1, -1, L"\nTest String Number 3.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00103)\n");
+  rax = 0x4BF00103;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
 
+  ShellPrintEx(-1, -1, L"\nTest String Number 4.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00104)\n");
+  rax = 0x4BF00104;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 5.\n");
+  gBS->Stall (1000000);
   ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00100)\n");
   rax = 0x4BF00100;
   asm volatile (
   "cpuid\n\t"
   : "+a"(rax));
 
-  ShellPrintEx(-1, -1, L"\nTest String Number 4.\n");
-
+  ShellPrintEx(-1, -1, L"\nTest String Number 6.\n");
+  gBS->Stall (1000000);
   ShellPrintEx(-1, -1, L"\n\nThat's all, returning to Shell.\n");
 
   return SHELL_SUCCESS;

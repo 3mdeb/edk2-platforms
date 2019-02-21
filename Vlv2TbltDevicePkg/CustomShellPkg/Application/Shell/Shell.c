@@ -995,15 +995,6 @@ UefiMain (
         ConInHandle   = NULL;
       }
 
-      if (!EFI_ERROR(Status) && PcdGet8(PcdShellSupportLevel) >= 1) {
-        //
-        // process the startup script or launch the called app.
-        //
-        Status = DoStartupScript(ShellInfoObject.ImageDevPath, ShellInfoObject.FileDevPath);
-      }
-
-      if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit() && (PcdGet8(PcdShellSupportLevel) >= 3 || PcdGetBool(PcdShellForceConsole)) && !EFI_ERROR(Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
-
         ShellCommandRegisterCommandName(L"bareflank",                     //*CommandString,
                                         &TrampolineBareflank,             //CommandHandler,
                                         DummyGetManFileName,              //GetManFileName,
@@ -1033,6 +1024,15 @@ UefiMain (
                                         ShellInfoObject.HiiHandle,        //HiiHandle,
                                         STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
                                       );
+
+      if (!EFI_ERROR(Status) && PcdGet8(PcdShellSupportLevel) >= 1) {
+        //
+        // process the startup script or launch the called app.
+        //
+        Status = DoStartupScript(ShellInfoObject.ImageDevPath, ShellInfoObject.FileDevPath);
+      }
+
+      if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit() && (PcdGet8(PcdShellSupportLevel) >= 3 || PcdGetBool(PcdShellForceConsole)) && !EFI_ERROR(Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
 
         //
         // begin the UI waiting loop
@@ -1366,7 +1366,7 @@ ProcessCommandLine(
   ShellInfoObject.ShellInitSettings.BitUnion.Bits.Delay        = FALSE;
   ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit         = FALSE;
   ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoNest       = FALSE;
-  ShellInfoObject.ShellInitSettings.Delay = 5;
+  ShellInfoObject.ShellInitSettings.Delay = 2;
 
   //
   // Start LoopVar at 0 to parse only optional arguments at Argv[0]

@@ -49,10 +49,7 @@ DEFINE FLASH_REGION_AZALIABIN_BASE                            = 0xFFD08000
 !endif
 
 DEFINE FLASH_REGION_FVMAIN_OFFSET                             = 0x00110000
-DEFINE FLASH_REGION_FVMAIN_SIZE                               = 0x00215000
-
-DEFINE FLASH_REGION_BINARY_FIRMWARE_OFFSET                    = 0x00325000
-DEFINE FLASH_REGION_BINARY_FIRMWARE_SIZE                      = 0x00083000
+DEFINE FLASH_REGION_FVMAIN_SIZE                               = 0x00298000
 
 DEFINE FLASH_REGION_FV_RECOVERY2_OFFSET                       = 0x003A8000
 DEFINE FLASH_REGION_FV_RECOVERY2_SIZE                         = 0x00020000
@@ -155,13 +152,6 @@ FILE = Vlv2TbltDevicePkg/Stitch/Gcc/NvStorageFtwSpare.bin
 $(FLASH_REGION_FVMAIN_OFFSET)|$(FLASH_REGION_FVMAIN_SIZE)
 gPlatformModuleTokenSpaceGuid.PcdFlashFvMainBase|gPlatformModuleTokenSpaceGuid.PcdFlashFvMainSize
 FV = FVMAIN_COMPACT
-
-  #
-  # Binary Firmware
-  #
-$(FLASH_REGION_BINARY_FIRMWARE_OFFSET)|$(FLASH_REGION_BINARY_FIRMWARE_SIZE)
-gPlatformModuleTokenSpaceGuid.PcdFlashBinFwBase|gPlatformModuleTokenSpaceGuid.PcdFlashBinFwSize
-FILE = target_binary.efi
 
   #
   # FV Recovery#2
@@ -660,7 +650,7 @@ FILE DRIVER = 961578FE-B6B7-44c3-AF35-6BC705CD2B1F {
 #
 # Bareflank
 #
-FILE APPLICATION = 78563412-3412-7856-9012-123456789012 {
+FILE APPLICATION = cd018687-b2c0-4099-b7c1-0fdae2f7d097 {
     SECTION PE32 = bareflank.efi
   }
 

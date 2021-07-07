@@ -325,7 +325,7 @@ TrampolineBareflank(
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_GUID BareflankGuid = {0x78563412, 0x3412, 0x7856, {0x90, 0x12, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12}};  //TODO: use proper GUID
+  EFI_GUID BareflankGuid = {0xcd018687, 0xb2c0, 0x4099, {0xb7, 0xc1, 0x0f, 0xda, 0xe2, 0xf7, 0xd0, 0x97}};
   EFI_STATUS                      Status;
   EFI_STATUS                      CleanupStatus;
   EFI_HANDLE                      NewHandle;
@@ -333,9 +333,7 @@ TrampolineBareflank(
   MEMMAP_DEVICE_PATH              MemPath[2];
   UINTN                           FvHandleCount;
   EFI_HANDLE                      *FvHandleBuffer;
-  EFI_FV_FILETYPE                 Type;
   UINTN                           Size;
-  EFI_FV_FILE_ATTRIBUTES          Attributes;
   UINT32                          AuthenticationStatus;
   EFI_FIRMWARE_VOLUME2_PROTOCOL   *Fv;
   VOID                            *Buffer;
@@ -357,26 +355,19 @@ TrampolineBareflank(
           (VOID **) &Fv
           );
 
-    Status = Fv->ReadFile (
+    Status = Fv->ReadSection(
           Fv,
           &BareflankGuid,
+          EFI_SECTION_PE32,
+          0,
           &Buffer,
           &Size,
-          &Type,
-          &Attributes,
           &AuthenticationStatus
           );
     if (Status == EFI_NOT_FOUND) {
-      Print(L"Image not found in Fv[%d]\n", i);
       continue;
     }
     else if (Status == EFI_SUCCESS) {
-      Print(L"Image found in Fv[%d]\n", i);
-      Print(L"\tBuffer %x\n", Buffer);
-      Print(L"\tSize %x\n", Size);
-      Print(L"\tType %x\n", Type);
-      Print(L"\tAttributes %x\n", Attributes);
-      Print(L"\tAuthenticationStatus %x\n", AuthenticationStatus);
       break;
     }
     else {
@@ -395,8 +386,7 @@ TrampolineBareflank(
   MemPath[0].Header.Length[1] = (UINT8)(sizeof(MEMMAP_DEVICE_PATH) >> 8);
   MemPath[0].MemoryType = EfiLoaderCode;
 
-  // Buffer+4 - header of PE32 **section**. TODO: is it defined anywhere in the code?
-  MemPath[0].StartingAddress = ((UINTN)Buffer)+4;
+  MemPath[0].StartingAddress = ((UINTN)Buffer);
   MemPath[0].EndingAddress = MemPath[0].StartingAddress + Size;
 
   MemPath[1].Header.Type = END_DEVICE_PATH_TYPE;
@@ -632,34 +622,96 @@ Trampoline(
 
 SHELL_STATUS
 EFIAPI
-TestBF(
+Cpuid(
   IN EFI_HANDLE        ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  UINTN rax = 0xbf00;
+  UINT64 rax;
+  EFI_STATUS Status;
 
-  ShellPrintEx(-1, -1, L"Testing for Bareflank: ");
+  if (ShellInfoObject.NewShellParametersProtocol->Argc < 2) {
+    ShellPrintEx(-1, -1, L"Not enough arguments\r\n");
+    return SHELL_INVALID_PARAMETER;
+  }
+
+  Status = StrHexToUint64S(ShellInfoObject.NewShellParametersProtocol->Argv[1],
+                            NULL, &rax);
+  if (Status != EFI_SUCCESS || rax == 0) {
+    ShellPrintEx(-1, -1, L"Not a valid hex number: %s\r\n",
+                  ShellInfoObject.NewShellParametersProtocol->Argv[1]);
+    return SHELL_INVALID_PARAMETER;
+  }
 
   asm volatile (
   "cpuid\n\t"
   : "+a"(rax));
 
-  if (rax == 0xbf01) {
-    ShellPrintEx(-1, -1, L"success\r\n");
-  } else {
-    ShellPrintEx(-1, -1, L"error (%x)\r\n\
-        Trying vmcall (this will hang if Bareflank isn't started): ", rax);
-    asm volatile ("vmcall\n\t");
-    ShellPrintEx(-1, -1, L"success\r\n");
-  }
+  return SHELL_SUCCESS;
+}
+
+SHELL_STATUS
+EFIAPI
+Demo(
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  UINT64 rax;
+
+  ShellPrintEx(-1, -1, L"This is sample application.\n\
+It prints some text and does CPUID to talk to Bareflank based hypervisor.\n");
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 1.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00101)\n");
+  rax = 0x4BF00101;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 2.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00102)\n");
+  rax = 0x4BF00102;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 3.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00103)\n");
+  rax = 0x4BF00103;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 4.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00104)\n");
+  rax = 0x4BF00104;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 5.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"cpuid (RAX=0x4BF00100)\n");
+  rax = 0x4BF00100;
+  asm volatile (
+  "cpuid\n\t"
+  : "+a"(rax));
+
+  ShellPrintEx(-1, -1, L"\nTest String Number 6.\n");
+  gBS->Stall (1000000);
+  ShellPrintEx(-1, -1, L"\n\nThat's all, returning to Shell.\n");
 
   return SHELL_SUCCESS;
 }
 
 CONST CHAR16*
 EFIAPI
-RtnicGetManFileName (
+DummyGetManFileName (
   VOID
   )
 {
@@ -943,6 +995,36 @@ UefiMain (
         ConInHandle   = NULL;
       }
 
+        ShellCommandRegisterCommandName(L"bareflank",                     //*CommandString,
+                                        &TrampolineBareflank,             //CommandHandler,
+                                        DummyGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
+
+        ShellCommandRegisterCommandName(L"cpuid",                         //*CommandString,
+                                        &Cpuid,                           //CommandHandler,
+                                        DummyGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
+
+        ShellCommandRegisterCommandName(L"demo",                          //*CommandString,
+                                        &Demo,                            //CommandHandler,
+                                        DummyGetManFileName,              //GetManFileName,
+                                        3,                                //ShellMinSupportLevel,
+                                        L"",                              //*ProfileName,
+                                        TRUE,                             //CanAffectLE,
+                                        ShellInfoObject.HiiHandle,        //HiiHandle,
+                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
+                                      );
+
       if (!EFI_ERROR(Status) && PcdGet8(PcdShellSupportLevel) >= 1) {
         //
         // process the startup script or launch the called app.
@@ -951,44 +1033,6 @@ UefiMain (
       }
 
       if (!ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit && !ShellCommandGetExit() && (PcdGet8(PcdShellSupportLevel) >= 3 || PcdGetBool(PcdShellForceConsole)) && !EFI_ERROR(Status) && !ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleIn) {
-
-        ShellCommandRegisterCommandName(L"rtnic",                         //*CommandString,
-                                        &Trampoline,                      //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
-                                        3,                                //ShellMinSupportLevel,
-                                        L"",                              //*ProfileName,
-                                        TRUE,                             //CanAffectLE,
-                                        ShellInfoObject.HiiHandle,        //HiiHandle,
-                                        STRING_TOKEN(STR_GET_HELP_RTNIC)  //ManFormatHelp
-                                      );
-        if (Status == EFI_SUCCESS) {
-          //
-          // Uncomment the following line to run embedded application on startup
-          //
-          //RunCommand(L"rtnic /efuse /r");
-        } else {
-          ShellPrintEx(-1, -1, L"\r\nShellCommandRegisterCommandName error: %x\r\n", Status);
-        }
-
-        ShellCommandRegisterCommandName(L"bareflank",                     //*CommandString,
-                                        &TrampolineBareflank,             //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
-                                        3,                                //ShellMinSupportLevel,
-                                        L"",                              //*ProfileName,
-                                        TRUE,                             //CanAffectLE,
-                                        ShellInfoObject.HiiHandle,        //HiiHandle,
-                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
-                                      );
-
-        ShellCommandRegisterCommandName(L"testbf",                        //*CommandString,
-                                        &TestBF,                          //CommandHandler,
-                                        RtnicGetManFileName,              //GetManFileName,
-                                        3,                                //ShellMinSupportLevel,
-                                        L"",                              //*ProfileName,
-                                        TRUE,                             //CanAffectLE,
-                                        ShellInfoObject.HiiHandle,        //HiiHandle,
-                                        STRING_TOKEN(STR_SHELL_CRLF)      //ManFormatHelp
-                                      );
 
         //
         // begin the UI waiting loop
@@ -1322,7 +1366,7 @@ ProcessCommandLine(
   ShellInfoObject.ShellInitSettings.BitUnion.Bits.Delay        = FALSE;
   ShellInfoObject.ShellInitSettings.BitUnion.Bits.Exit         = FALSE;
   ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoNest       = FALSE;
-  ShellInfoObject.ShellInitSettings.Delay = 5;
+  ShellInfoObject.ShellInitSettings.Delay = 2;
 
   //
   // Start LoopVar at 0 to parse only optional arguments at Argv[0]
